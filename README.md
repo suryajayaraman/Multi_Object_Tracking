@@ -13,3 +13,7 @@ Repo for MOT course at edX
 7. PDA - Algorithm, pros and cons
 8. GSF - Algorithm, pros and cons
 9. Practical approach - Gating, pruning and merging methods
+
+
+![SOT_output](https://github.com/suryajayaraman/Multi_Object_Tracking/blob/master/Module2_SOT_in_clutter/singleobjectracker_output.png?raw=true)
+
