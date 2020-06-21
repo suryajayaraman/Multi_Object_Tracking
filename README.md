@@ -15,7 +15,9 @@ Repo for MOT course at edX
 9. Practical approach - Gating, pruning and merging methods
 
 ### NN, PDA and GSF performance in SOT comparison 
-![SOT_output](https://github.com/suryajayaraman/Multi_Object_Tracking/blob/master/Module2_SOT_in_clutter/singleobjectracker_output.png?raw=true)
+![SOT_Linear_case_comparison](https://github.com/suryajayaraman/Multi_Object_Tracking/blob/master/Module2_SOT_in_clutter/Linear_simulation_SOT_output.png?raw=true)
+
+![SOT_Non_Linear_case_comparison](https://github.com/suryajayaraman/Multi_Object_Tracking/blob/master/Module2_SOT_in_clutter/Non_Linear_simulation_SOT_output.png?raw=true)
 
 ## Reference
 1. Multi Object tracking course on edX - https://www.edx.org/course/multi-object-tracking-for-automotive-systems
