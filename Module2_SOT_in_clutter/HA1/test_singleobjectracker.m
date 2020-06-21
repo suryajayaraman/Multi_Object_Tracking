@@ -40,7 +40,7 @@ tracker = singleobjectracker();
 tracker = tracker.initialize(density_class_handle,P_G,meas_model.d,w_min,merging_threshold,M);
 
 %Nearest neighbour filter
-% nearestNeighborEstimates = nearestNeighbourFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+nearestNeighborEstimates = nearestNeighbourFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
 
 %Probabilistic data association filter
 probDataAssocEstimates = probDataAssocFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
@@ -49,7 +49,7 @@ probDataAssocEstimates = probDataAssocFilter(tracker, initial_state, measdata, s
 GaussianSumEstimates = GaussianSumFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
 
 true_state = cell2mat(objectdata.X');
-% NN_estimated_state = cell2mat(nearestNeighborEstimates');
+NN_estimated_state = cell2mat(nearestNeighborEstimates');
 PDA_estimated_state = cell2mat(probDataAssocEstimates');
 GS_estimated_state = cell2mat(GaussianSumEstimates');
 
@@ -58,13 +58,13 @@ hold on
 grid on
 
 plot(true_state(1,:), true_state(2,:), 'g','Linewidth', 2)
-% plot(NN_estimated_state(1,:), NN_estimated_state(2,:), 'r-s' , 'Linewidth', 1)
+plot(NN_estimated_state(1,:), NN_estimated_state(2,:), 'r-s' , 'Linewidth', 1)
 plot(PDA_estimated_state(1,:), PDA_estimated_state(2,:), 'm-o' , 'Linewidth', 1)
 plot(GS_estimated_state(1,:), GS_estimated_state(2,:), 'b-d' , 'Linewidth', 1)
 
 xlabel('x (m)')
 ylabel('y (m)')
-% legend('Ground Truth','Nearest Neighbour', 'Probalistic Data Association', 'Gaussian Sum', 'Location', 'best')
-legend('Ground Truth', 'Probalistic Data Association', 'Gaussian Sum', 'Location', 'best')
+legend('Ground Truth','Nearest Neighbour', 'Probalistic Data Association', 'Gaussian Sum', 'Location', 'best')
+% legend('Ground Truth', 'Probalistic Data Association', 'Gaussian Sum', 'Location', 'best')
 
 set(gca,'FontSize',12)

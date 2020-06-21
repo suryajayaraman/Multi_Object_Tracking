@@ -86,39 +86,49 @@ classdef singleobjectracker
             estimates = cell(N,1);
             
             % first predicted state is the prior distribution
-            state_pred = state;
+            % state_pred = state;
+            
+            % weights factor
+            w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
+            w_theta_0_factor = log(1 - sensormodel.P_D);
             
             for i=1:N
                 z = Z{i};
                 
                 % Apply gating
-                [z_ingate, ~] = obj.density.ellipsoidalGating(state_pred, z, measmodel, obj.gating.size);
+                [z_ingate, ~] = obj.density.ellipsoidalGating(state, z, measmodel, obj.gating.size);
                 
                 % number of hypothesis
                 mk = size(z_ingate,2) + 1;
                 
-                % calculate predicted likelihood = N(z; zbar, S) => scalar value
-                predicted_likelihood = exp(obj.density.predictedLikelihood(state_pred,z_ingate,measmodel));
-                
-                % EVALUATE HYPOTHESIS
-                % detection and missdetection
-                w_theta_k = sensormodel.P_D * predicted_likelihood / sensormodel.intensity_c;
-                w_theta_0 = 1 - sensormodel.P_D;
-                
-                % measurement update
-                [max_w_theta, max_theta] = max(w_theta_k);
-                if mk==1 || w_theta_0 > max_w_theta
-                    state_upd = state_pred;
+                % no valid measurements within gate
+                if(mk==1)
+                    state_upd = state;
+                    
                 else
-                    z_NN = z_ingate(:,max_theta);    % nearest neighbour measurement
-                    state_upd = obj.density.update(state_pred, z_NN, measmodel);
+                    % calculate predicted likelihood = N(z; zbar, S) => scalar value
+                    log_likelihood = obj.density.predictedLikelihood(state,z_ingate,measmodel);
+
+                    % EVALUATE HYPOTHESIS
+                    % detection and missdetection
+                    w_theta_k = exp(w_theta_k_factor + log_likelihood);
+                    w_theta_0 = exp(w_theta_0_factor);
+                    
+                    % measurement update
+                    [max_w_theta, max_theta] = max(w_theta_k);
+                    if(w_theta_0 > max_w_theta)
+                        state_upd = state;
+                    else
+                        z_NN = z_ingate(:,max_theta);    % nearest neighbour measurement
+                        state_upd = obj.density.update(state, z_NN, measmodel);
+                    end
                 end
                 
                 % updated stat 
                 estimates{i} = state_upd.x;
                 
                 % predict the next state
-                state_pred = obj.density.predict(state_upd, motionmodel);
+                state = obj.density.predict(state_upd, motionmodel);
             end
         end
         
