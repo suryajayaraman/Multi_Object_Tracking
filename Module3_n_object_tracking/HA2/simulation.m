@@ -105,6 +105,13 @@ density_class_handle = feval(@GaussianDensity);    %density class handle
 tracker = n_objectracker();
 tracker = tracker.initialize(density_class_handle,P_G,meas_model.d,w_min,merging_threshold,M);  % chi2inv(0.999,2)
 
+% obj = tracker;
+% states = initial_state ;
+% Z = measdata;
+% sensormodel = sensor_model;
+% motionmodel = motion_model;
+% measmodel = meas_model;
+
 
 % GNN_RMSE=0; JPDA_RMSE=0; TOMHT_RMSE=0;
 
