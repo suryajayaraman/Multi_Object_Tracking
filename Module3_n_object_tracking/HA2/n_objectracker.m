@@ -83,73 +83,86 @@ methods
         % 6. predict each local hypothesis.
 		
         % number of time steps
-        total_track_time = length(Z);  
-
-        estimates_x = cell(total_track_time,1);
-        estimates_P = cell(total_track_time,1);
+        total_track_time = numel(Z);  
 
         % no of objects
         no_of_objects = numel(states);
+        
+%         disp(no_of_objects);
+        
+        estimates_x = cell(total_track_time,1);
+        estimates_P = cell(total_track_time,1);
 
         w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
         w_theta_0_factor = log(1 - sensormodel.P_D);
 
-        for i = 1 :total_track_time
-            z = Z{i};
+        % start of for loop
+        for k = 1 : total_track_time
+            z = Z{k};
 
-            meas_in_gate = zeros(no_of_objects, size(z,2));
-
+            % 1. Implement ellipsoidal gating for each predicted local hypothesis;
+            %    Here 0 means that object is not detected by corresponding measurment
+            meas_objects_detected = zeros(no_of_objects, size(z,2));
             for i = 1 : no_of_objects
-                [~, meas_in_obj_gate] = obj.density.ellipsoidalGating(states(i), z, measmodel, obj.gating.size);
-                meas_in_gate(i, :) = meas_in_obj_gate;
+                [~, meas_objects_detected(i, :)] = obj.density.ellipsoidalGating(states(i), z, measmodel, obj.gating.size);
             end
 
-            valid_meas_idx = sum(meas_in_gate, 1) > 0;
-            meas_in_gate = meas_in_gate(:, valid_meas_idx);
+            % 1.2 Remove measurements that dont have any objects assoicated with them
+            valid_meas_idx = sum(meas_objects_detected, 1) > 0;
+            meas_objects_detected = meas_objects_detected(:, valid_meas_idx);
             z_ingate = z(:, valid_meas_idx);
+
+            % no of measurements that have atleast one object associated with them
             mk = size(z_ingate, 2);
 
-            states_upd = states;
-
+            % By default, hold the previous value
             if(mk > 0)
-                % calculate cost matrix
-                cost_matrix = zeros(no_of_objects, no_of_objects + mk);
+                % 2. Construct cost matrix
+                cost_matrix = inf(no_of_objects, no_of_objects + mk);
                 % misdetection factors for all objects is same
-                cost_matrix(:, mk +1 :end) = eye(no_of_objects) * w_theta_0_factor;
+                cost_matrix(:, mk +1 : end) = eye(no_of_objects) * -w_theta_0_factor;
 
                 % detection cost added
-                for j = 1 : no_of_objects
-                    if sum(meas_in_gate(j,:)) > 0
-                        disp(j);
-                        for k = 1 : mk
-                            if meas_in_gate(j,k) == 1
-                                cost_matrix(j,k) = w_theta_k_factor + obj.density.predictedLikelihood(states(j),z_ingate(:, k),measmodel);
+                for i = 1 : no_of_objects
+                    if sum(meas_objects_detected(i,:)) > 0
+                        for j = 1 : mk
+                            if meas_objects_detected(i,j) == 1
+                                % likelihood for n objects (slide 110 in L3 handouts)
+                                z_hat = measmodel.h(states(i).x);
+                                S_i_h = measmodel.H(states(i).x) * states(i).P * measmodel.H(states(i).x)' + measmodel.R; 
+                                S_i_h = (S_i_h + S_i_h') / 2;
+                                cost_matrix(i,j) = -( w_theta_k_factor ...
+                                                     - 0.5 * log( 2 * pi * det(S_i_h)) ...
+                                                     - 0.5 * ((z(:,j) - z_hat)' * S_i_h * (z(:,j) - z_hat)));
                             end
                         end
                     end
                 end
 
-                % find the best assignment matrix for the calculated cost matrix
+                % 3. find the best assignment matrix for the calculated cost matrix
                 [col4row, ~, gain] = assign2D(cost_matrix);
-
+                
                 % infeasible solution
                 if(gain ~= -1)
-                    %update detected objects according to best hypothesis
+                    % 4. create new local hypothesis according to best assignment matrix obtained 
                     for row = 1: no_of_objects
+                        % if object is assigned a measurement
                         if col4row(row) <= mk
                             z_obj_NN = z_ingate(:,col4row(row));    % nearest neighbour measurement
-                            states_upd(row) = obj.density.update(states(row), z_obj_NN, measmodel);                
+                            states(row) = obj.density.update(states(row), z_obj_NN, measmodel);
                         end      
                     end
                 end 
             end
 
-            % updated stat 
-            estimates_x{i} = cell(arrayfun(@(state) (state.x), states_upd, 'UniformOutput',false));
-            estimates_P{i} = cell(arrayfun(@(state) (state.P), states_upd, 'UniformOutput',false));
-
-            % predict the next state
-            states = arrayfun(@(state) obj.density.predict(state, motionmodel), states_upd);
+            % 5. extract object state estimates;
+            for i = 1 : no_of_objects
+                estimates_x{k}(:,i)   = states(i).x;
+                estimates_P{k}(:,:,i) = states(i).P;
+            end
+%             disp(size(states));
+            % 6. predict each local hypothesis.
+            states = arrayfun(@(state) obj.density.predict(state, motionmodel), states);
         end
     end
 
@@ -183,6 +196,24 @@ methods
         % 7. merge local hypotheses that correspond to the same object by moment matching;
         % 8. extract object state estimates;
         % 9. predict each local hypothesis.
+        
+        % number of time steps
+        total_track_time = numel(Z);  
+
+%         no of objects
+        no_of_objects = numel(states);
+
+        estimates_x = cell(total_track_time,1);
+        estimates_P = cell(total_track_time,1);
+        
+        for k = 1 : total_track_time
+            for i = 1 : no_of_objects
+                estimates_x{k}(:,i)   = zeros(4,1);
+                estimates_P{k}(:,:,i) = zeros(4,4);
+            end
+        end
+%         w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
+%         w_theta_0_factor = log(1 - sensormodel.P_D);
 
     end 
 
@@ -222,6 +253,22 @@ methods
         % 7. Re-index global hypothesis look-up table;
         % 8. extract object state estimates from the global hypothesis with the highest weight;
         % 9. predict each local hypothesis in each hypothesis tree.
+        
+        % number of time steps
+        total_track_time = numel(Z);  
+
+%         no of objects
+        no_of_objects = numel(states);
+
+        estimates_x = cell(total_track_time,1);
+        estimates_P = cell(total_track_time,1);
+        
+        for k = 1 : total_track_time
+            for i = 1 : no_of_objects
+                estimates_x{k}(:,i)   = zeros(4,1);
+                estimates_P{k}(:,:,i) = zeros(4,4);
+            end
+        end
 
     end
     
