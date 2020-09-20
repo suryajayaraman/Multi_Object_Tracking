@@ -1,23 +1,13 @@
 # Multi_Object_Tracking
-Repo for MOT course at edX
+Repo for Multi object Tracking course at edX offered by Chalmers University
 
 
-## Module2
-## Single object tracking in clutter
-1. Inclusion of object detection (Pd) in hypothesis
-2. Clutter models
-3. Bernoulli, Binomial and Poission distribution
-4. Exact Motion and measurement models for SOT in clutter
-5. Cons of actual model and ways to approximate solution
-6. GNN - Algorithm, pros and cons
-7. PDA - Algorithm, pros and cons
-8. GSF - Algorithm, pros and cons
-9. Practical approach - Gating, pruning and merging methods
+## Module2 (Single object tracking in clutter)
 
 ### NN, PDA and GSF performance in SOT comparison 
-![SOT_Linear_case_comparison](https://github.com/suryajayaraman/Multi_Object_Tracking/blob/master/Module2_SOT_in_clutter/Linear_simulation_SOT_output.png?raw=true)
 
-![SOT_Non_Linear_case_comparison](https://github.com/suryajayaraman/Multi_Object_Tracking/blob/master/Module2_SOT_in_clutter/Non_Linear_simulation_SOT_output.png?raw=true)
+[![SOT_algorithms_comparison](Module2_SOT_in_clutter/HA1/SOT_animation/SOT_algorithms.gif)](https://www.youtube.com/embed/9hx7jsrRZXY  "SOT algorithms comparison")
+
 
 ## Reference
 1. Multi Object tracking course on edX - https://www.edx.org/course/multi-object-tracking-for-automotive-systems
