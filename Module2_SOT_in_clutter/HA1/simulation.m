@@ -87,15 +87,15 @@ tracker = singleobjectracker();
 tracker = tracker.initialize(density_class_handle,P_G,meas_model.d,w_min,merging_threshold,M);
 
 %Nearest neighbour filter
-nearestNeighborEstimates = nearestNeighbourFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+[nearestNeighborEstimates, nn_est_P] = nearestNeighbourFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
 nearestNeighborRMSE = RMSE(nearestNeighborEstimates,objectdata.X);
 
 %Probabilistic data association filter
-probDataAssocEstimates = probDataAssocFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+[probDataAssocEstimates, pda_est_P] = probDataAssocFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
 probDataAssocRMSE = RMSE(probDataAssocEstimates,objectdata.X);
 
 %Gaussian sum filter
-GaussianSumEstimates = GaussianSumFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+[GaussianSumEstimates, gsf_est_P] = GaussianSumFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
 GaussianSumRMSE = RMSE(GaussianSumEstimates,objectdata.X);
 
 X = sprintf('Root mean square error: Nearest neighbour: %.3f; Probabilistic data association: %.3f; Gaussian sum filtering: %.3f.'...
@@ -113,9 +113,9 @@ hold on
 grid on
 
 plot(true_state(1,:), true_state(2,:), 'g','Linewidth', 2)
-plot(NN_estimated_state(1,:), NN_estimated_state(2,:), 'r-s' , 'Linewidth', 1)
-plot(PDA_estimated_state(1,:), PDA_estimated_state(2,:), 'm-o' , 'Linewidth', 1)
-plot(GS_estimated_state(1,:), GS_estimated_state(2,:), 'b-d' , 'Linewidth', 1)
+plot(NN_estimated_state(1,:), NN_estimated_state(2,:), 'r' , 'Linewidth', 1)
+plot(PDA_estimated_state(1,:), PDA_estimated_state(2,:), 'm' , 'Linewidth', 1)
+plot(GS_estimated_state(1,:), GS_estimated_state(2,:), 'b' , 'Linewidth', 1)
 
 xlabel('x (m)')
 ylabel('y (m)')

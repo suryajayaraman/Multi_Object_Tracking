@@ -54,7 +54,7 @@ classdef singleobjectracker
             obj.reduction.M = M;
         end
         
-        function estimates = nearestNeighbourFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
+        function [estimates_x, estimates_P] = nearestNeighbourFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %NEARESTNEIGHBOURFILTER tracks a single object using nearest
             %neighbor association 
             %INPUT: state: a structure with two fields:
@@ -83,7 +83,8 @@ classdef singleobjectracker
             %disp(size(Z(1))); % returns 1 x 1 size cell array
             
             % initialise output
-            estimates = cell(N,1);
+            estimates_x = cell(N,1);
+            estimates_P = cell(N,1);
             
             % first predicted state is the prior distribution
             % state_pred = state;
@@ -125,7 +126,8 @@ classdef singleobjectracker
                 end
                 
                 % updated stat 
-                estimates{i} = state_upd.x;
+                estimates_x{i} = state_upd.x;
+                estimates_P{i} = state_upd.P;
                 
                 % predict the next state
                 state = obj.density.predict(state_upd, motionmodel);
@@ -133,7 +135,7 @@ classdef singleobjectracker
         end
         
         
-        function estimates = probDataAssocFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
+        function [estimates_x, estimates_P] = probDataAssocFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %PROBDATAASSOCFILTER tracks a single object using probalistic
             %data association 
             %INPUT: state: a structure with two fields:
@@ -152,7 +154,8 @@ classdef singleobjectracker
             N = length(Z);
             
             % initialise output
-            estimates = cell(N,1);
+            estimates_x = cell(N,1);
+            estimates_P = cell(N,1);
             
             % weights factor
             w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
@@ -219,14 +222,15 @@ classdef singleobjectracker
             	end
             					
             	% updated estimates array
-            	estimates{i} = state_upd.x;
+            	estimates_x{i} = state_upd.x;
+                estimates_P{i} = state_upd.P;
             	
             	% predict the next state
             	state = obj.density.predict(state_upd, motionmodel);
             end 
         end
         
-        function estimates = GaussianSumFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
+        function [estimates_x, estimates_P] = GaussianSumFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %GAUSSIANSUMFILTER tracks a single object using Gaussian sum
             %filtering
             %INPUT: state: a structure with two fields:
@@ -246,7 +250,8 @@ classdef singleobjectracker
             N = length(Z);
             
             % initialise output
-            estimates = cell(N,1);
+            estimates_x = cell(N,1);
+            estimates_P = cell(N,1);
             
             % weights factor
             w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
@@ -318,7 +323,8 @@ classdef singleobjectracker
             	
             	% 7. extract object estimate  using most probable hypo
             	[~, indices] = sort(weight_new,'descend');
-            	estimates{i} = hypo_new(indices(1)).x;
+            	estimates_x{i} = hypo_new(indices(1)).x;
+                estimates_P{i} = hypo_new(indices(1)).P;
             			
             	% 8. for each hypo, perform prediction		
             	for idx = 1 : size(hypo_new,1)
