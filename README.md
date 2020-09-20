@@ -6,7 +6,7 @@ Repo for Multi object Tracking course at edX offered by Chalmers University
 
 ### NN, PDA and GSF performance in SOT comparison 
 
-[![SOT_algorithms_comparison](Module2_SOT_in_clutter/HA1/SOT_animation/SOT_algorithms.gif)](https://www.youtube.com/embed/9hx7jsrRZXY  "SOT algorithms comparison")
+[![SOT_algorithms_comparison](Module2_SOT_in_clutter/SOT_animation/SOT_algorithms.gif)](https://www.youtube.com/embed/9hx7jsrRZXY  "SOT algorithms comparison")
 
 
 ## Reference
