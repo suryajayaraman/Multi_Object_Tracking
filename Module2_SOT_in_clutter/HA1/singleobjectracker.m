@@ -88,7 +88,7 @@ classdef singleobjectracker
         	% iterate through timestamps
         	for k = 1 : totalTrackTime
             
-        		% get current timestep measurements
+			% get current timestep measurements
         		zk = Z{k};
 		
         		% perform gating and find number of measurements inside limits
@@ -100,7 +100,7 @@ classdef singleobjectracker
 			        posteriorState = state;
 			
 		        % object is detected
-                else
+                	else
         			likelihoodDensity = obj.density.predictedLikelihood(state, z_inGate, measmodel); 
 			        wk_theta = exp(log_wk_theta_factor + likelihoodDensity);
 			        wk_zero  = exp(log_wk_zero_factor);
@@ -108,23 +108,23 @@ classdef singleobjectracker
         			[max_wk_theta, index] = max(wk_theta);
 			        if(max_wk_theta < wk_zero)
 				        posteriorState = state;
-                    else
-                        
-                        % kalman filter update using nearest neighbour measurement
+                    		
+				else
+                        	% kalman filter update using nearest neighbour measurement
 				        z_NN = z_inGate(:, index);
 				        posteriorState = obj.density.update(state, z_NN, measmodel);
 			        end
-                end
+                	end
                 
-                % updated state variables 
-                estimates{k}   = posteriorState.x;
-                estimates_x{k} = posteriorState.x;
-                estimates_P{k} = posteriorState.P;
+			% updated state variables 
+			estimates{k}   = posteriorState.x;
+			estimates_x{k} = posteriorState.x;
+			estimates_P{k} = posteriorState.P;
                 
-                % predict the next state
-                state = obj.density.predict(posteriorState, motionmodel);
-            end
-        end
+			% predict the next state
+			state = obj.density.predict(posteriorState, motionmodel);
+            	end
+	end
         
         function [estimates_x, estimates_P] = probDataAssocFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %PROBDATAASSOCFILTER tracks a single object using probalistic
