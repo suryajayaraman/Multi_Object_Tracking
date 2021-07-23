@@ -126,7 +126,8 @@ classdef singleobjectracker
             	end
 	end
         
-        function [estimates_x, estimates_P] = probDataAssocFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
+	
+        function estimates = probDataAssocFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %PROBDATAASSOCFILTER tracks a single object using probalistic
             %data association 
             %INPUT: state: a structure with two fields:
@@ -142,85 +143,83 @@ classdef singleobjectracker
             %OUTPUT:estimates: cell array of size (total tracking time, 1),
             %       each cell stores estimated object state of size (object
             %       state dimension) x 1  
-            N = length(Z);
-            
-            % initialise output
-            estimates_x = cell(N,1);
-            estimates_P = cell(N,1);
-            
-            % weights factor
-            w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
-            w_theta_0_factor = log(1 - sensormodel.P_D);
-            
-            			
-            for i=1:N
-            	z = Z{i};
-            	% fprintf('\n Timestamp : %d', i);
-            	% fprintf('\n Before gating there are %d measurements', size(z,2));
-            	
-            	% Apply gating
-            	[z_ingate, ~] = obj.density.ellipsoidalGating(state, z, measmodel, obj.gating.size);
-            	% fprintf('\n After gating there are %d measurements', size(z_ingate,2));
-            
-            	% number of hypothesis
-            	mk = size(z_ingate,2) + 1;
-            	
-            	% object is undetected
-            	if mk ==1
-            		%fprintf('\n object is undetected');
-            		state_upd = state;
-            	
-            	% process measurements
-            	else
-            		
-            		% hypothesis cell array intialise
-            		multiHypotheses = repmat(state, mk,1);
-            		
-            		% missed_detection_hypo is the last row
-            		multiHypotheses(mk,1) = state;
-            		
-            		% calculate predicted likelihood = N(z; zbar, S) => scalar value
-            		log_likelihood = obj.density.predictedLikelihood(state,z_ingate,measmodel);
-            		
-            		% detection and missdetection weights
-            		log_w_theta_k = w_theta_k_factor + log_likelihood;
-            		log_w_theta_0 = w_theta_0_factor;
-            		unnormalised_log_weights = [log_w_theta_k; log_w_theta_0];
-            		% fprintf('\n Sum of unnormalised_weights : %f', sum(exp(unnormalised_log_weights)));
-            		
-            		[normalised_log_weights, ~] = normalizeLogWeights(unnormalised_log_weights);
-            		% fprintf('\n Sum of normalised_weights : %f', sum(exp(normalised_log_weights)));
-            				
-            		% detection hypothesis
-            		for index = 1: mk-1
-            			hypo_thetak = obj.density.update(state, z_ingate(:, index), measmodel);
-            			multiHypotheses(index,1) = hypo_thetak;		
-            		end
-            		% fprintf('\n Size of normalised_log_weights %s', mat2str(size(normalised_log_weights)));
-            		% fprintf('\n Size of multiHypotheses %s', mat2str(size(multiHypotheses)));
-            %                     fprintf('\n Size of multiHypotheses(2) %s', mat2str(size(multiHypotheses(2))));
-            %                     fprintf('\n Size of state vector is %s', mat2str(size(multiHypotheses(1).x)));
-            		
-            		% pruning and renormalising weights
-            		[hypothesesWeight,multiHypotheses] = hypothesisReduction.prune(normalised_log_weights, multiHypotheses, obj.reduction.w_min);
-            		[normalised_log_weights, ~] = normalizeLogWeights(hypothesesWeight);
-            													
-            		% moment matching
-            		[~ ,multiHypotheses] = hypothesisReduction.merge(normalised_log_weights ,multiHypotheses, ...
-            													10000000.0, obj.density);
-            		state_upd = multiHypotheses(1,1);
-            		% state_upd = obj.density.momentMatching(normalised_log_weights, multiHypotheses);
-            	end
-            					
-            	% updated estimates array
-            	estimates_x{i} = state_upd.x;
-                estimates_P{i} = state_upd.P;
-            	
-            	% predict the next state
-            	state = obj.density.predict(state_upd, motionmodel);
-            end 
-        end
-        
+	        
+		totalTrackTime = size(Z,1);
+				
+        	% placeholders for outputs
+        	estimates = cell(totalTrackTime, 1);
+        	estimates_x = cell(totalTrackTime, 1);
+        	estimates_P = cell(totalTrackTime, 1);
+
+        	% useful parameters
+        	log_wk_theta_factor = log(sensormodel.P_D / sensormodel.intensity_c);
+        	log_wk_zero_factor  = log(1 - sensormodel.P_D);
+
+        	% initial state is considered posterior for first timestamp
+        	posteriorState = state;
+
+        	% iterate through timestamps
+        	for k = 1 : totalTrackTime
+        		% get current timestep measurements
+        		zk = Z{k};
+
+        		% perform gating and find number of measurements inside limits
+        		[z_inGate, ~] = obj.density.ellipsoidalGating(state, zk, measmodel, obj.gating.size);
+        		mk = size(z_inGate, 2) + 1;
+						
+        		% misdetection
+        		if mk == 1
+        			posteriorState = state;
+	
+        		% object is detected
+        		else		
+        			% placeholder for storing possible hypothesis
+        			hypothesisArray = repmat(state, mk,1);
+        			% misdetection is the last state 
+        			hypothesisArray(mk,1) = state;
+
+        			% calculate predicted likelihood = N(z; zbar, S) => scalar value
+        			% represents log weights for measurements inside gate
+        			likelihoodDensity = obj.density.predictedLikelihood(state, z_inGate, measmodel);
+			
+        			% unnormalized weights vector
+        			log_wk_theta = log_wk_theta_factor + likelihoodDensity;
+        			log_wk_zero  = log_wk_zero_factor;
+        			hypothesis_logWeights = [log_wk_theta; log_wk_zero];
+		        	% fprintf('\n Sum of unnormalised_weights : %f', sum(exp(hypothesisWeights)));
+			
+        			% normalized weights
+        			[hypothesis_logWeights, ~] = normalizeLogWeights(hypothesis_logWeights);
+        			% fprintf('\n Sum of normalised_weights : %f', sum(exp(hypothesis_logWeights)));
+			
+        			% for each measurement inside gate perform kalman filter update 
+        			for index = 1: mk-1
+        				hypothesisArray(index,1) = obj.density.update(state, z_inGate(:, index), measmodel);
+        			end
+			
+        			% pruning and renormalising weights
+        			[hypothesis_logWeights, hypothesisArray] = hypothesisReduction.prune(hypothesis_logWeights, ...
+									   hypothesisArray, obj.reduction.w_min);
+        			[hypothesis_logWeights, ~] = normalizeLogWeights(hypothesis_logWeights);
+        			
+        			% moment matching
+        			[~ ,hypothesisArray] = hypothesisReduction.merge(hypothesis_logWeights ,hypothesisArray, ...
+										10000000.0, obj.density);
+        			% predict the next state
+        			posteriorState = hypothesisArray(1,1);
+		        end
+						
+        		% updated state variables 
+        		estimates{k}   = posteriorState.x;		
+        		estimates_x{k} = posteriorState.x;
+        		estimates_P{k} = posteriorState.P;
+        		
+        		% predict the next state
+        		state = obj.density.predict(posteriorState, motionmodel);
+	        end 
+        end  
+	
+	
         function [estimates_x, estimates_P] = GaussianSumFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %GAUSSIANSUMFILTER tracks a single object using Gaussian sum
             %filtering
