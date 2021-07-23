@@ -71,69 +71,60 @@ classdef singleobjectracker
             %       each cell stores estimated object state of size (object
             %       state dimension) x 1   
             
-            total_track_time = length(Z);  
-            %N = numel(Z);
-            N = total_track_time;
-            %disp(class(Z));
-            % https://in.mathworks.com/matlabcentral/answers/106341-how-to-get-type-of-a-variable-in-matlab#:~:text=To%20get%20the%20data%20type,use%20the%20%E2%80%9Cclass%E2%80%9D%20function.&text=To%20determine%20if%20a%20variable,use%20the%20%E2%80%9Cisa%E2%80%9D%20function.&text=For%20a%20list%20of%20functions,%2C%20see%20%E2%80%9Cis*%E2%80%9D.
+        	totalTrackTime = size(Z,1);
+                        
+            % placeholders for outputs
+            estimates = cell(totalTrackTime, 1);
+            estimates_x = cell(totalTrackTime, 1);
+            estimates_P = cell(totalTrackTime, 1);
+	
+        	% useful parameters
+        	log_wk_theta_factor = log(sensormodel.P_D / sensormodel.intensity_c);
+        	log_wk_zero_factor  = log(1 - sensormodel.P_D);
+	
+        	% initial state is considered posterior for first timestamp
+        	posteriorState = state;
+	
+        	% iterate through timestamps
+        	for k = 1 : totalTrackTime
             
-            %disp(class(Z{1})); returns 'double' type, a matrix
-            % disp(size(Z(1))); returns 'cell',  type, a cell array
-            %disp(size(Z{1})); % returns 2 x N size matrix
-            %disp(size(Z(1))); % returns 1 x 1 size cell array
-            
-            % initialise output
-            estimates_x = cell(N,1);
-            estimates_P = cell(N,1);
-            
-            % first predicted state is the prior distribution
-            % state_pred = state;
-            
-            % weights factor
-            w_theta_k_factor = log(sensormodel.P_D / sensormodel.intensity_c);
-            w_theta_0_factor = log(1 - sensormodel.P_D);
-            
-            for i=1:N
-                z = Z{i};
-                
-                % Apply gating
-                [z_ingate, ~] = obj.density.ellipsoidalGating(state, z, measmodel, obj.gating.size);
-                
-                % number of hypothesis
-                mk = size(z_ingate,2) + 1;
-                
-                % no valid measurements within gate
-                if(mk==1)
-                    state_upd = state;
-                    
+        		% get current timestep measurements
+        		zk = Z{k};
+		
+        		% perform gating and find number of measurements inside limits
+        		[z_inGate, ~] = obj.density.ellipsoidalGating(state, zk, measmodel, obj.gating.size);
+        		mk = size(z_inGate, 2) + 1;
+                                
+        		% misdetection
+		        if mk == 1
+			        posteriorState = state;
+			
+		        % object is detected
                 else
-                    % calculate predicted likelihood = N(z; zbar, S) => scalar value
-                    log_likelihood = obj.density.predictedLikelihood(state,z_ingate,measmodel);
+        			likelihoodDensity = obj.density.predictedLikelihood(state, z_inGate, measmodel); 
+			        wk_theta = exp(log_wk_theta_factor + likelihoodDensity);
+			        wk_zero  = exp(log_wk_zero_factor);
 
-                    % EVALUATE HYPOTHESIS
-                    % detection and missdetection
-                    w_theta_k = exp(w_theta_k_factor + log_likelihood);
-                    w_theta_0 = exp(w_theta_0_factor);
-                    
-                    % measurement update
-                    [max_w_theta, max_theta] = max(w_theta_k);
-                    if(w_theta_0 > max_w_theta)
-                        state_upd = state;
+        			[max_wk_theta, index] = max(wk_theta);
+			        if(max_wk_theta < wk_zero)
+				        posteriorState = state;
                     else
-                        z_NN = z_ingate(:,max_theta);    % nearest neighbour measurement
-                        state_upd = obj.density.update(state, z_NN, measmodel);
-                    end
+                        
+                        % kalman filter update using nearest neighbour measurement
+				        z_NN = z_inGate(:, index);
+				        posteriorState = obj.density.update(state, z_NN, measmodel);
+			        end
                 end
                 
-                % updated stat 
-                estimates_x{i} = state_upd.x;
-                estimates_P{i} = state_upd.P;
+                % updated state variables 
+                estimates{k}   = posteriorState.x;
+                estimates_x{k} = posteriorState.x;
+                estimates_P{k} = posteriorState.P;
                 
                 % predict the next state
-                state = obj.density.predict(state_upd, motionmodel);
+                state = obj.density.predict(posteriorState, motionmodel);
             end
         end
-        
         
         function [estimates_x, estimates_P] = probDataAssocFilter(obj, state, Z, sensormodel, motionmodel, measmodel)
             %PROBDATAASSOCFILTER tracks a single object using probalistic
