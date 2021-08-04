@@ -1,6 +1,6 @@
 ## Module2
 
-## Single object tracking in clutter
+### Single object tracking in clutter
 1. Inclusion of object detection probability(P_D) in hypothesis
 2. Standard Clutter models
 3. Bernoulli, Binomial and Poission distribution and their usecases
@@ -12,7 +12,7 @@
 9. Practical approach - Gating, pruning and merging methods
 
 
-PDA Algorithm 
+### PDA concepts
 - Equivalent to JPDA with always 1 object to track
 - Single hypothesis posterior density 
 - Posterior is like weighted sum of different hypotheses
@@ -41,6 +41,8 @@ The NN, PDA and GSF algorithms are compared in scenarios of varying tracking dif
 using the above motion and measurement models.
 
 
+
+
 ### Comparison results
 
 #### Simple Scenario with High P_D and Low clutter
@@ -50,6 +52,8 @@ there is little difference between the three algorithms in terms of tracking
 accuracy. 
 
 ![Success_case_SOT](SOT_animation/SOT_Success_cases_comparison.png)
+
+
 
 
 #### More difficult Scenario with Low P_D and High clutter
