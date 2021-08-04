@@ -1,10 +1,12 @@
-# Multi_Object_Tracking
+## Multi_Object_Tracking
+
 Repo for Multi object Tracking course at edX offered by Chalmers University
 
 
-## Module2 (Single object tracking in clutter)
+### Module2 (Single object tracking in clutter)
 
-### NN, PDA and GSF performance in SOT comparison 
+
+#### NN, PDA and GSF performance in SOT comparison 
 
 [![SOT_algorithms_comparison](Module2_SOT_in_clutter/SOT_animation/SOT_algorithms.gif)](https://www.youtube.com/embed/9hx7jsrRZXY  "SOT algorithms comparison")
 
