@@ -16,10 +16,10 @@ dbstop if error
 %Choose object detection probability
 P_D = 0.5;
 %Choose clutter rate
-lambda_c = 100;
+lambda_c = 50;
 
 %Choose linear or nonlinear scenario
-scenario_type = 'nonlinear';
+scenario_type = 'linear';
 
 %Create tracking scenario
 switch(scenario_type)
@@ -87,38 +87,48 @@ tracker = singleobjectracker();
 tracker = tracker.initialize(density_class_handle,P_G,meas_model.d,w_min,merging_threshold,M);
 
 %Nearest neighbour filter
-[nearestNeighborEstimates, nn_est_P] = nearestNeighbourFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
-nearestNeighborRMSE = RMSE(nearestNeighborEstimates,objectdata.X);
+[nn_est_x, nn_est_P] = nearestNeighbourFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+nearestNeighborRMSE = RMSE(nn_est_x,objectdata.X);
 
 %Probabilistic data association filter
-[probDataAssocEstimates, pda_est_P] = probDataAssocFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
-probDataAssocRMSE = RMSE(probDataAssocEstimates,objectdata.X);
+[pda_est_x, pda_est_P] = probDataAssocFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+probDataAssocRMSE = RMSE(pda_est_x,objectdata.X);
 
 %Gaussian sum filter
-[GaussianSumEstimates, gsf_est_P] = GaussianSumFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
-GaussianSumRMSE = RMSE(GaussianSumEstimates,objectdata.X);
+[gsf_est_x, gsf_est_P] = GaussianSumFilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+GaussianSumRMSE = RMSE(gsf_est_x,objectdata.X);
 
-X = sprintf('Root mean square error: Nearest neighbour: %.3f; Probabilistic data association: %.3f; Gaussian sum filtering: %.3f.'...
+X = sprintf('Root mean square error: Nearest neighbour: %.3f;\n Probabilistic data association: %.3f;\n Gaussian sum filtering: %.3f.\n'...
     ,nearestNeighborRMSE,probDataAssocRMSE,GaussianSumRMSE);
 disp(X)
 
-%Ploting
-true_state = cell2mat(objectdata.X');
-NN_estimated_state = cell2mat(nearestNeighborEstimates');
-PDA_estimated_state = cell2mat(probDataAssocEstimates');
-GS_estimated_state = cell2mat(GaussianSumEstimates');
+
+%% convert state estimates to matrices
+state_size = size(objectdata.X{1}, 1);
+true_states  = reshape(cell2mat(objectdata.X), K, []);
+nn_states_x  = cell2mat(nn_est_x');
+pda_states_x = cell2mat(pda_est_x');
+gsf_states_x = cell2mat(gsf_est_x');
+
+nn_states_P  = reshape(cell2mat(nn_est_P), K, state_size, state_size);
+pda_states_P = reshape(cell2mat(pda_est_P), K, state_size, state_size); 
+gsf_states_P = reshape(cell2mat(gsf_est_P), K, state_size, state_size);
+
+%% Ploting
 
 figure
 hold on
 grid on
 
-plot(true_state(1,:), true_state(2,:), 'g','Linewidth', 2)
-plot(NN_estimated_state(1,:), NN_estimated_state(2,:), 'r' , 'Linewidth', 1)
-plot(PDA_estimated_state(1,:), PDA_estimated_state(2,:), 'm' , 'Linewidth', 1)
-plot(GS_estimated_state(1,:), GS_estimated_state(2,:), 'b' , 'Linewidth', 1)
+plot(true_states(1,:),  true_states(2,:), 'g','Linewidth', 2)
+plot(nn_states_x(1,:),  nn_states_x(2,:), 'r' , 'Linewidth', 1)
+plot(pda_states_x(1,:), pda_states_x(2,:), 'm' , 'Linewidth', 1)
+plot(gsf_states_x(1,:), gsf_states_x(2,:), 'b' , 'Linewidth', 1)
 
 xlabel('x (m)')
 ylabel('y (m)')
 legend('Ground Truth','Nearest Neighbour', 'Probalistic Data Association', 'Gaussian Sum', 'Location', 'best')
-
 set(gca,'FontSize',12)
+
+save('sot_linear_ws', 'true_states', 'nn_states_x', 'nn_states_P', ...
+    'pda_states_x', 'pda_states_P', 'gsf_states_x', 'gsf_states_P');
