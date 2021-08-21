@@ -65,7 +65,7 @@ classdef n_objectracker
        
         
 
-        function estimates = GNNfilter(obj, states, Z, sensormodel, motionmodel, measmodel)
+        function [estimates_x, estimates_P] = GNNfilter(obj, states, Z, sensormodel, motionmodel, measmodel)
             %GNNFILTER tracks n object using global nearest neighbor
             %association 
             %INPUT: obj: an instantiation of n_objectracker class
@@ -86,9 +86,12 @@ classdef n_objectracker
 
             totalTrackTime = numel(Z);
             n_objects = size(states,2);
+            state_size = size(states(1).x,1);
 
             % placeholders for outputs
-            estimates = cell(totalTrackTime, 1);
+            estimates   = cell(totalTrackTime, 1);
+            estimates_x = cell(totalTrackTime, 1);
+            estimates_P = cell(totalTrackTime, 1);
 
             % useful parameters
             log_wk_theta_factor = log(sensormodel.P_D / sensormodel.intensity_c);
@@ -127,7 +130,10 @@ classdef n_objectracker
                 zk_valid = zk(:, noninf_cols(1:mk));
                 mk_valid = size(zk_valid, 2);
 
-                estimates{k} = zeros(size(states(1).x,1), n_objects);
+                estimates{k}   = zeros(state_size, n_objects);
+                estimates_x{k} = zeros(state_size, n_objects);
+                estimates_P{k} =  ones(state_size, state_size, n_objects);
+                
                 % solve assignment problem
                 [col4row, ~, gain]=assign2D(costMatrix);
                 if(gain ~= -1)
@@ -142,7 +148,9 @@ classdef n_objectracker
                         end
 
                         % store posterior density
-                        estimates{k}(:,n) = state.x;
+                        estimates{k}(:,n)     = state.x;
+                        estimates_x{k}(:,n)   = state.x;
+                        estimates_P{k}(:,:,n) = state.P;
 
                         % kalman filter prediction
                         state = obj.density.predict(state,motionmodel);
@@ -153,7 +161,7 @@ classdef n_objectracker
         end
                 
         
-        function estimates = JPDAfilter(obj, states, Z, sensormodel, motionmodel, measmodel)
+        function [estimates_x, estimates_P] = JPDAfilter(obj, states, Z, sensormodel, motionmodel, measmodel)
             %JPDAFILTER tracks n object using joint probabilistic data
             %association
             %INPUT: obj: an instantiation of n_objectracker class
@@ -186,10 +194,13 @@ classdef n_objectracker
             totalTrackTime = numel(Z);
             n_objects = size(states,2);
             measurement_size = size(Z{1},1);
+            state_size = size(states(1).x,1);
 
             % placeholders for outputs
-            estimates = cell(totalTrackTime, 1);
-
+            estimates   = cell(totalTrackTime, 1);
+            estimates_x = cell(totalTrackTime, 1);
+            estimates_P = cell(totalTrackTime, 1);
+            
             % useful parameters
             log_wk_theta_factor = log(sensormodel.P_D / sensormodel.intensity_c);
             log_wk_zero_factor  = log(1 - sensormodel.P_D);
@@ -197,7 +208,6 @@ classdef n_objectracker
 
             
             for k = 1 : totalTrackTime
-%                 fprintf('starting %d index ... \n', k);
                 % get current timestep measurements
                 zk = Z{k};
 
@@ -271,8 +281,10 @@ classdef n_objectracker
 																	exp(log_w_h(hypothesisIndex));
                     end
                 end
-                
-                estimates{k} = zeros(size(states(1).x,1), n_objects);
+
+                estimates{k}   = zeros(state_size, n_objects);
+                estimates_x{k} = zeros(state_size, n_objects);
+                estimates_P{k} =  ones(state_size, state_size, n_objects);
                 
                 % 6. create new local hypotheses for each of the data association results;
                 % 7. merge local hypotheses that correspond to the same object by moment matching;                
@@ -304,7 +316,9 @@ classdef n_objectracker
                     
                     % 8. extract object state estimates;
                     % store posterior density
-                    estimates{k}(:,i) = state.x;
+                    estimates{k}(:,i)     = state.x;
+                    estimates_x{k}(:,i)   = state.x;
+                    estimates_P{k}(:,:,i) = state.P;                    
 
                     % 9. predict each local hypothesis.                    
                     % kalman filter prediction
@@ -315,7 +329,7 @@ classdef n_objectracker
         end
             
             
-        function estimates = TOMHT(obj, states, Z, sensormodel, motionmodel, measmodel)
+        function [estimates_x, estimates_P] = TOMHT(obj, states, Z, sensormodel, motionmodel, measmodel)
             %TOMHT tracks n object using track-oriented multi-hypothesis tracking
             %INPUT: obj: an instantiation of n_objectracker class
             %       states: structure array of size (1, number of objects)
@@ -372,7 +386,9 @@ classdef n_objectracker
             state_size = size(states(1).x,1);
 
             % placeholders for outputs
-            estimates = cell(totalTrackTime, 1);
+            estimates   = cell(totalTrackTime, 1);
+            estimates_x = cell(totalTrackTime, 1);
+            estimates_P = cell(totalTrackTime, 1);
 
             % useful parameters
             log_wk_theta_factor = log(sensormodel.P_D / sensormodel.intensity_c);
@@ -578,11 +594,16 @@ classdef n_objectracker
                 %% ESTIMATE MAX LIKELIHOOD HYPOTHESES
                 [~, best_w_log_h_idx] = max(new_w_log_h);
 
-                estimates{k} = zeros(state_size, n_objects);
+                estimates{k}   = zeros(state_size, n_objects);
+                estimates_x{k} = zeros(state_size, n_objects);
+                estimates_P{k} =  ones(state_size, state_size, n_objects);
+
                 for i = 1 : n_objects
                     % local hypotheses with highest weight is best estimate for object
                     local_hyp_index = new_global_h(best_w_log_h_idx, i);
-                    estimates{k}(:, i) = new_local_h_trees{i}(local_hyp_index).x;
+                    estimates{k}(:, i)    = new_local_h_trees{i}(local_hyp_index).x;
+                    estimates_x{k}(:, i)  = new_local_h_trees{i}(local_hyp_index).x;
+                    estimates_P{k}(:,:,i) = new_local_h_trees{i}(local_hyp_index).P;
 
                     % prediction step for each local hypotheses
                     new_local_h_trees{i} = arrayfun( @(lh_i) obj.density.predict(...

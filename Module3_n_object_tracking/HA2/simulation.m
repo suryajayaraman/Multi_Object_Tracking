@@ -109,18 +109,18 @@ tracker = tracker.initialize(density_class_handle,P_G,meas_model.d,w_min,merging
 
 %% results plotting
 %GNN filter
-GNNestimates = GNNfilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
-GNN_RMSE = RMSE_n_objects(objectdata.X,GNNestimates);
+[GNNestimates_x, GNNestimates_P] = GNNfilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+GNN_RMSE = RMSE_n_objects(objectdata.X, GNNestimates_x);
 fprintf('Root mean square error: GNN: %.3f\n',GNN_RMSE);
 
 %JPDA filter
-JPDAestimates = JPDAfilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
-JPDA_RMSE = RMSE_n_objects(objectdata.X,JPDAestimates);
+[JPDAestimates_x, JPDAestimates_P] = JPDAfilter(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+JPDA_RMSE = RMSE_n_objects(objectdata.X, JPDAestimates_x);
 fprintf('Root mean square error: JPDA: %.3f \n',JPDA_RMSE);
 
 %Multi-hypothesis tracker
-TOMHTestimates = TOMHT(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
-TOMHT_RMSE = RMSE_n_objects(objectdata.X,TOMHTestimates);
+[TOMHTestimates_x, TOMHTestimates_P] = TOMHT(tracker, initial_state, measdata, sensor_model, motion_model, meas_model);
+TOMHT_RMSE = RMSE_n_objects(objectdata.X, TOMHTestimates_x);
 fprintf('Root mean square error: TOMHT: %.3f \n',TOMHT_RMSE);
 
 %Ploting
@@ -131,15 +131,30 @@ grid on
 for i = 1:nbirths
     h1 = plot(cell2mat(cellfun(@(x) x(1,i), objectdata.X, 'UniformOutput', false)), ...
         cell2mat(cellfun(@(x) x(2,i), objectdata.X, 'UniformOutput', false)), 'g', 'Linewidth', 2);
-    h2 = plot(cell2mat(cellfun(@(x) x(1,i), GNNestimates, 'UniformOutput', false)), ...
-        cell2mat(cellfun(@(x) x(2,i), GNNestimates, 'UniformOutput', false)), 'r-s', 'Linewidth', 1);
-    h3 = plot(cell2mat(cellfun(@(x) x(1,i), JPDAestimates, 'UniformOutput', false)), ...
-        cell2mat(cellfun(@(x) x(2,i), JPDAestimates, 'UniformOutput', false)), 'm-o', 'Linewidth', 1);
-    h4 = plot(cell2mat(cellfun(@(x) x(1,i), TOMHTestimates, 'UniformOutput', false)), ...
-        cell2mat(cellfun(@(x) x(2,i), TOMHTestimates, 'UniformOutput', false)), 'b-d', 'Linewidth', 1);
+    h2 = plot(cell2mat(cellfun(@(x) x(1,i), GNNestimates_x, 'UniformOutput', false)), ...
+        cell2mat(cellfun(@(x) x(2,i), GNNestimates_x, 'UniformOutput', false)), 'r-s', 'Linewidth', 1);
+    h3 = plot(cell2mat(cellfun(@(x) x(1,i), JPDAestimates_x, 'UniformOutput', false)), ...
+        cell2mat(cellfun(@(x) x(2,i), JPDAestimates_x, 'UniformOutput', false)), 'm-o', 'Linewidth', 1);
+    h4 = plot(cell2mat(cellfun(@(x) x(1,i), TOMHTestimates_x, 'UniformOutput', false)), ...
+        cell2mat(cellfun(@(x) x(2,i), TOMHTestimates_x, 'UniformOutput', false)), 'b-d', 'Linewidth', 1);
 end
 
 xlabel('x'); ylabel('y')
 legend([h1 h2 h3 h4],'Ground Truth','GNN','JPDA','TOMHT', 'Location', 'best')
-% legend([h1 h4],'Ground Truth','TOMHT','Location', 'best')
 set(gca,'FontSize',12) 
+
+
+%% convert state estimates to matrices
+state_size = size(objectdata.X{1}, 1);
+true_states    = reshape(cell2mat(objectdata.X), K, [], nbirths);
+GNN_states_x   = reshape(cell2mat(cellfun(@(x) x, GNNestimates_x, 'UniformOutput', false)), K, state_size, nbirths);
+JPDA_states_x  = reshape(cell2mat(cellfun(@(x) x, JPDAestimates_x, 'UniformOutput', false)), K, state_size, nbirths); 
+TOMHT_states_x = reshape(cell2mat(cellfun(@(x) x, TOMHTestimates_x, 'UniformOutput', false)), K, state_size, nbirths);
+
+GNN_states_P   = reshape(cell2mat(cellfun(@(x) x, GNNestimates_P,   'UniformOutput', false)), K, state_size, state_size, nbirths);
+JPDA_states_P  = reshape(cell2mat(cellfun(@(x) x, JPDAestimates_P,  'UniformOutput', false)), K, state_size, state_size, nbirths); 
+TOMHT_states_P = reshape(cell2mat(cellfun(@(x) x, TOMHTestimates_P, 'UniformOutput', false)), K, state_size, state_size, nbirths);
+
+% save variables to as mat file
+save('not_linear_success2_ws', 'true_states', 'GNN_states_x', 'GNN_states_P', ...
+    'JPDA_states_x', 'JPDA_states_P', 'TOMHT_states_x', 'TOMHT_states_P');
