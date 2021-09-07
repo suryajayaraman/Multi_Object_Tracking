@@ -23,3 +23,29 @@
 - The idea is to compute joint association probabilities of the individual 
   marginal probabilities (see JPDA basic idea, marginal association probabilities
   section in handout)
+  
+## N-Object Tracking Results
+
+#### Simple Scenario with High P_D and Low clutter
+
+In simple scenarios with higher probability of detection and less clutter rate,
+there is little difference between the three algorithms in terms of tracking 
+accuracy. 
+
+![Success_case_N-OT](N-OT_animation/not_linear_success.png)
+
+
+#### GNN failure case
+
+Even in simple scenarios, there can be cases where GNN can lose track. This is 
+due to the fact that the best hypothesis calculated for the timestep might not
+be optimal over the entire timeline. So, if the optimal association is lost, then
+the GNN cannot track the object effecitvely
+
+![Failure_case_GNN](N-OT_animation/not_linear_success2.png)
+
+
+In complex scenarios (i.e when P_D is lower and clutter intensity is high), GNN 
+will mostly lose track of the object while JPDA and TO-MHT still perform effectively
+
+![Low_PD_scenario](N-OT_animation/not_linear_failure.png)
