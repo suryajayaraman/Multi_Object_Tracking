@@ -26,10 +26,13 @@ the filter output and calculate tracking error between them. Such metrics accoun
 error (RMSE component) while penalising missed and false detected objects. 
 
 Hence PHD results contain plots for cardinality error and localisation error.
+
 ![PHD_cardinality](PHD_animation/PHD_filter_output_cardinality.png)
+
 ![PHD_tracking_results](PHD_animation/PHD_filter_output_tracking.png)
 
 
-GOSPA is a scalar representing weighted average of cardinality and localisation errors
+GOSPA is a scalar representing weighted average of cardinality and localisation errors.
+
 ![PHD_GOSPA_metric](PHD_animation/PHD_filter_output_metrics.png)
 
